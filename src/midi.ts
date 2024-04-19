@@ -1,62 +1,81 @@
 import {IMIDIInput, MIDIVal} from '@midival/core';
+import {MidiDeviceChangeEvent, MidiDeviceChangeMessage, MidiEventMatchers, getTextForEvent, isInputMidiDeviceConnectedEvent, isSameMidiDevice} from './types';
 
 const p = MIDIVal.connect();
 
 export const getInputs = async () => {
     const response = await p;
-    return response.inputs;
+    knownConnectedInputDevices = response.inputs;
+    return knownConnectedInputDevices;
 };
 
 let processing = false;
 
-type ConnectionEvent = {
-    type: 'connect' | 'disconnect';
-    input: IMIDIInput;
+let events: MidiDeviceChangeEvent[] = [];
+let knownConnectedInputDevices: IMIDIInput[] = [];
+
+let callback = (message: MidiDeviceChangeMessage) => {
+    console.log('Callback not set:', message);
 };
 
-let events: ConnectionEvent[] = [];
-let knownConnectedDevices: IMIDIInput[] = [];
-
-let callback = (inputDevices: IMIDIInput[]) => {
+export const setCallback = (cb: (message: MidiDeviceChangeMessage) => void) => {
+    callback = cb;
 };
 
 const finishProcessing = () => {
+    console.log(`Known connected input devices at finishProcessing: ${knownConnectedInputDevices.length}`)
     processing = false;
     events.forEach((event) => {
-        if (event.type === 'connect') {
-            if (events.find((e) => e.input.name === event.input.name && e.type === 'disconnect')) {
+        if (MidiEventMatchers.isInputConnectedEvent(event)) {
+            if (events.find((e) => MidiEventMatchers.isInputDisconnectedEvent(e) && isSameMidiDevice(event.device, e.device))) {
                 return;
             }
 
-            for (const knownDevice of knownConnectedDevices) {
-                if (knownDevice.name === event.input.name) {
+            for (const knownDevice of knownConnectedInputDevices) {
+                if (isSameMidiDevice(knownDevice, event.device)) {
                     return;
                 }
             }
 
-            knownConnectedDevices.push(event.input);
-            console.log('Input connected:', event.input.name);
-        } else {
-            if (events.find((e) => e.input.name === event.input.name && e.type === 'connect')) {
+            console.log('Adding known connected input device:', event.device);
+            knownConnectedInputDevices = [...knownConnectedInputDevices, event.device];
+            console.log('Known connected input devices:', knownConnectedInputDevices);
+            dispatchMessageForEvent(event);
+        } else if (MidiEventMatchers.isInputDisconnectedEvent(event)) {
+            if (events.find((e) => MidiEventMatchers.isInputConnectedEvent(e) && isSameMidiDevice(event.device, e.device))) {
                 return;
             }
 
-            knownConnectedDevices = knownConnectedDevices.filter((device) => device.name !== event.input.name);
-            console.log('Input disconnected:', event.input.name);
+            console.log('Removing known connected input device:', event.device);
+            knownConnectedInputDevices = knownConnectedInputDevices.filter((device) => !isSameMidiDevice(device, event.device));
+            console.log('Known connected input devices:', knownConnectedInputDevices);
+            dispatchMessageForEvent(event);
         }
     });
 
     events = [];
 }
 
+const dispatchMessageForEvent = (event: MidiDeviceChangeEvent) => {
+    console.log('Dispatching message for event:', event);
+
+    const message: MidiDeviceChangeMessage = {
+        state: {
+            connectedInputDevices: knownConnectedInputDevices,
+            connectedOutputDevices: [],
+        },
+        event,
+    };
+
+    callback(message);
+};
+
 const processNewInputChange = () => {
     if (!processing) {
-        // console.log('Processing new input change');
-
         processing = true;
         setTimeout(() => {
             finishProcessing();
-        }, 200);
+        }, 400);
     }
 }
 
@@ -64,8 +83,8 @@ MIDIVal.onInputDeviceConnected((input) => {
     processNewInputChange();
 
     events.push({
-        type: 'connect',
-        input,
+        type: 'input_connected',
+        device: input,
     });
 });
 
@@ -73,7 +92,7 @@ MIDIVal.onInputDeviceDisconnected((input) => {
     processNewInputChange();
 
     events.push({
-        type: 'disconnect',
-        input,
+        type: 'input_disconnected',
+        device: input,
     });
 });
