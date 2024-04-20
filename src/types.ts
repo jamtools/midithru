@@ -45,27 +45,54 @@ export type MidiDeviceChangeEvent =
     | OutputMidiDeviceConnectedEvent
     | OutputMidiDeviceDisconnectedEvent;
 
-type CurrentMidiDeviceState = {
+export type CurrentMidiDeviceState = {
     connectedInputDevices: IMIDIInput[];
     connectedOutputDevices: IMIDIOutput[];
 }
 
 export type MidiDeviceChangeMessage = {
     state: CurrentMidiDeviceState;
-    event: MidiDeviceChangeEvent;
+    events?: MidiDeviceChangeEvent[];
 }
 
-export const getTextForEvent = (event: MidiDeviceChangeEvent): string => {
-    switch (true) {
-        case MidiEventMatchers.isInputConnectedEvent(event):
-            return `Input connected:\n${event.device.name}`;
-        case MidiEventMatchers.isInputDisconnectedEvent(event):
-            return `Input disconnected:\n${event.device.name}`;
-        case MidiEventMatchers.isOutputConnectedEvent(event):
-            return `Output connected:\n${event.device.name}`;
-        case MidiEventMatchers.isOutputDisconnectedEvent(event):
-            return `Output disconnected:\n${event.device.name}`;
+export const getTextForEvents = (events: MidiDeviceChangeEvent[]): string => {
+    let newConnectedDevices: string[] = [];
+    let newDisconnectedDevices: string[] = [];
+    for (const event of events) {
+        switch (true) {
+            case MidiEventMatchers.isInputConnectedEvent(event):
+                newConnectedDevices.push(event.device.name);
+                break;
+            case MidiEventMatchers.isInputDisconnectedEvent(event):
+                newDisconnectedDevices.push(event.device.name);
+                break;
+            case MidiEventMatchers.isOutputConnectedEvent(event):
+                newConnectedDevices.push(event.device.name);
+                break;
+            case MidiEventMatchers.isOutputDisconnectedEvent(event):
+                newDisconnectedDevices.push(event.device.name);
+                break;
+        }
     }
 
-    return `Unknown event type: ${event.type} for device: ${event.device.name}`;
+    let text = '';
+    newConnectedDevices = Array.from(new Set(newConnectedDevices));
+    newDisconnectedDevices = Array.from(new Set(newDisconnectedDevices));
+
+    if (newConnectedDevices.length) {
+        text += `Connected: ${newConnectedDevices.join(', ')}`;
+    }
+
+    if (newDisconnectedDevices.length) {
+        if (text.length) {
+            text += '\n';
+        }
+        text += `Disconnected: ${newDisconnectedDevices.join(', ')}`;
+    }
+
+    if (!text.length) {
+        text = 'No new device connections';
+    }
+
+    return text;
 }

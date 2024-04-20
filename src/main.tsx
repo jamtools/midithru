@@ -1,51 +1,75 @@
-import React from 'react';
+import React, {CSSProperties} from 'react';
 
 import {Toaster, toast} from 'react-hot-toast';
 
-import {IMIDIInput} from '@midival/core';
+import {setCallback} from './midi';
+import {CurrentMidiDeviceState, MidiEventMatchers, getTextForEvents} from './types';
 
-import {getInputs, setCallback} from './midi';
-import {getTextForEvent} from './types';
-
-const useMidiInputs = (): IMIDIInput[] => {
-    const [inputs, setInputs] = React.useState<IMIDIInput[]>([]);
+const useMidi = (): CurrentMidiDeviceState => {
+    const [midiDeviceState, setMidiDeviceState] = React.useState<CurrentMidiDeviceState>({connectedInputDevices: [], connectedOutputDevices: []});
 
     React.useEffect(() => {
         (async () => {
-            const response = await getInputs();
-            setInputs(response);
             setCallback((message) => {
                 console.log('Message:', message);
-                setInputs(message.state.connectedInputDevices);
+                setMidiDeviceState(message.state);
 
-                const text = getTextForEvent(message.event);
+                if (!message.events?.length) {
+                    return;
+                }
+
+                const text = getTextForEvents(message.events);
+
+                let backgroundColor: string | undefined;
+                if (message.events.find(e => MidiEventMatchers.isInputConnectedEvent(e) || MidiEventMatchers.isOutputConnectedEvent(e))) {
+                    backgroundColor = 'green';
+                }
+
                 toast(text, {
                     duration: 2000,
                     style: {
-                        backgroundColor: message.event.type === 'input_connected' ? 'green' : undefined,
+                        backgroundColor,
                     },
                 });
             });
         })();
     }, []);
 
-    return inputs;
+    return midiDeviceState;
 }
 
 export const Main = () => {
-    const inputs = useMidiInputs();
+    const midiState = useMidi();
+
+    const instrumentContainerStyle: CSSProperties = {
+        display: 'inline-block',
+        border: '1px solid black',
+        padding: '15px',
+    }
 
     return (
         <div>
             <Toaster />
-            <h2>Midi instruments:</h2>
-            <ul>
-                {inputs.map((input) => (
-                    <li key={input.id}>
-                        {input.name}
-                    </li>
-                ))}
-            </ul>
+            <div style={instrumentContainerStyle}>
+                <h2>Midi inputs:</h2>
+                <ul>
+                    {midiState.connectedInputDevices.map((device) => (
+                        <li key={device.id}>
+                            {device.name}
+                        </li>
+                    ))}
+                </ul>
+            </div>
+            <div style={instrumentContainerStyle}>
+                <h2>Midi outputs:</h2>
+                <ul>
+                    {midiState.connectedOutputDevices.map((device) => (
+                        <li key={device.id}>
+                            {device.name}
+                        </li>
+                    ))}
+                </ul>
+            </div>
         </div>
     );
 };
