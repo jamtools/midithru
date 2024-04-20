@@ -1,0 +1,33 @@
+{
+    "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+    "formatter": {
+        "attributePosition": "multiline"
+    },
+    "javascript": {
+        "formatter": {
+            "quoteStyle": "single",
+            "indentStyle": "space",
+            "indentWidth": 4,
+            "arrowParentheses": "asNeeded",
+            "jsxQuoteStyle": "single",
+            "bracketSpacing": false,
+            "attributePosition": "multiline"
+        }
+    },
+    "linter": {
+        "enabled": true,
+        "rules": {
+            "all": true,
+            "suspicious": {
+                "noConsoleLog": "off"
+            },
+            "style": {
+                "useImportType": "off"
+            },
+            "complexity": {
+                "noForEach": "off",
+                "noExcessiveCognitiveComplexity": "off"
+            }
+        }
+    }
+}
