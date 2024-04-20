@@ -1,0 +1,12 @@
+cd dist-build
+
+wrangler r2 object put midithru/index.html --file ./index.html --content-type text/html --cache-control no-store
+
+for f in ./* ; do
+    if [[ $f == "./index.html" ]]; then
+        continue
+    fi
+
+    fname=$(basename $f)
+    wrangler r2 object put midithru/$fname --file $f --content-type text/javascript --cache-control public,max-age=31536000
+done

@@ -1,5 +1,10 @@
 import {IMIDIInput, IMIDIOutput, MIDIVal} from '@midival/core';
-import {MidiDeviceChangeEvent, MidiDeviceChangeMessage, MidiEventMatchers, getTextForEvents, isInputMidiDeviceConnectedEvent, isSameMidiDevice} from './types';
+import {
+    MidiDeviceChangeEvent,
+    MidiDeviceChangeMessage,
+    MidiEventMatchers,
+    isSameMidiDevice,
+} from './types';
 
 const midiConnectPromise = MIDIVal.connect();
 
@@ -11,7 +16,7 @@ export const getInputs = async () => {
 
 let processing = false;
 
-let events: MidiDeviceChangeEvent[] = [];
+let recordedEvents: MidiDeviceChangeEvent[] = [];
 let knownConnectedInputDevices: IMIDIInput[] = [];
 let knownConnectedOutputDevices: IMIDIOutput[] = [];
 
@@ -19,7 +24,9 @@ let callback = (message: MidiDeviceChangeMessage) => {
     console.log('Callback not set:', message);
 };
 
-export const setCallback = async (cb: (message: MidiDeviceChangeMessage) => void) => {
+export const setCallback = async (
+    cb: (message: MidiDeviceChangeMessage) => void,
+) => {
     const response = await midiConnectPromise;
     knownConnectedInputDevices = response.inputs;
     knownConnectedOutputDevices = response.outputs;
@@ -28,20 +35,28 @@ export const setCallback = async (cb: (message: MidiDeviceChangeMessage) => void
     cb({
         state: {
             connectedInputDevices: knownConnectedInputDevices,
-            connectedOutputDevices: knownConnectedOutputDevices
+            connectedOutputDevices: knownConnectedOutputDevices,
         },
-        event: undefined,
+        events: undefined,
     });
 };
 
-const finishProcessing = () => {
-    console.log(`Known connected input devices at finishProcessing: ${knownConnectedInputDevices.length}`)
+const finishProcessing = (events: MidiDeviceChangeEvent[]) => {
+    console.log(
+        `Known connected input devices at finishProcessing: ${knownConnectedInputDevices.length}`,
+    );
     processing = false;
 
     const eventsToDispatch: MidiDeviceChangeEvent[] = [];
-    events.forEach((event) => {
+    events.forEach(event => {
         if (MidiEventMatchers.isInputConnectedEvent(event)) {
-            if (events.find((e) => MidiEventMatchers.isInputDisconnectedEvent(e) && isSameMidiDevice(event.device, e.device))) {
+            if (
+                events.find(
+                    e =>
+                        MidiEventMatchers.isInputDisconnectedEvent(e) &&
+                        isSameMidiDevice(event.device, e.device),
+                )
+            ) {
                 return;
             }
 
@@ -52,22 +67,45 @@ const finishProcessing = () => {
             }
 
             console.log('Adding known connected input device:', event.device);
-            knownConnectedInputDevices = [...knownConnectedInputDevices, event.device];
-            console.log('Known connected input devices:', knownConnectedInputDevices);
+            knownConnectedInputDevices = [
+                ...knownConnectedInputDevices,
+                event.device,
+            ];
+            console.log(
+                'Known connected input devices:',
+                knownConnectedInputDevices,
+            );
 
             eventsToDispatch.push(event);
         } else if (MidiEventMatchers.isInputDisconnectedEvent(event)) {
-            if (events.find((e) => MidiEventMatchers.isInputConnectedEvent(e) && isSameMidiDevice(event.device, e.device))) {
+            if (
+                events.find(
+                    e =>
+                        MidiEventMatchers.isInputConnectedEvent(e) &&
+                        isSameMidiDevice(event.device, e.device),
+                )
+            ) {
                 return;
             }
 
             console.log('Removing known connected input device:', event.device);
-            knownConnectedInputDevices = knownConnectedInputDevices.filter((device) => !isSameMidiDevice(device, event.device));
-            console.log('Known connected input devices:', knownConnectedInputDevices);
+            knownConnectedInputDevices = knownConnectedInputDevices.filter(
+                device => !isSameMidiDevice(device, event.device),
+            );
+            console.log(
+                'Known connected input devices:',
+                knownConnectedInputDevices,
+            );
 
             eventsToDispatch.push(event);
         } else if (MidiEventMatchers.isOutputConnectedEvent(event)) {
-            if (events.find((e) => MidiEventMatchers.isOutputDisconnectedEvent(e) && isSameMidiDevice(event.device, e.device))) {
+            if (
+                events.find(
+                    e =>
+                        MidiEventMatchers.isOutputDisconnectedEvent(e) &&
+                        isSameMidiDevice(event.device, e.device),
+                )
+            ) {
                 return;
             }
 
@@ -78,29 +116,48 @@ const finishProcessing = () => {
             }
 
             console.log('Adding known connected output device:', event.device);
-            knownConnectedOutputDevices = [...knownConnectedOutputDevices, event.device];
-            console.log('Known connected output devices:', knownConnectedOutputDevices);
+            knownConnectedOutputDevices = [
+                ...knownConnectedOutputDevices,
+                event.device,
+            ];
+            console.log(
+                'Known connected output devices:',
+                knownConnectedOutputDevices,
+            );
 
             eventsToDispatch.push(event);
         } else if (MidiEventMatchers.isOutputDisconnectedEvent(event)) {
-            if (events.find((e) => MidiEventMatchers.isOutputConnectedEvent(e) && isSameMidiDevice(event.device, e.device))) {
+            if (
+                events.find(
+                    e =>
+                        MidiEventMatchers.isOutputConnectedEvent(e) &&
+                        isSameMidiDevice(event.device, e.device),
+                )
+            ) {
                 return;
             }
 
-            console.log('Removing known connected output device:', event.device);
-            knownConnectedOutputDevices = knownConnectedOutputDevices.filter((device) => !isSameMidiDevice(device, event.device));
-            console.log('Known connected output devices:', knownConnectedOutputDevices);
+            console.log(
+                'Removing known connected output device:',
+                event.device,
+            );
+            knownConnectedOutputDevices = knownConnectedOutputDevices.filter(
+                device => !isSameMidiDevice(device, event.device),
+            );
+            console.log(
+                'Known connected output devices:',
+                knownConnectedOutputDevices,
+            );
 
             eventsToDispatch.push(event);
         }
     });
 
     dispatchMessageForEvent(eventsToDispatch);
-    events = [];
-}
+};
 
 const dispatchMessageForEvent = (events: MidiDeviceChangeEvent[]) => {
-    console.log('Dispatching message for event:', event);
+    console.log('Dispatching message for events:', events);
 
     const message: MidiDeviceChangeMessage = {
         state: {
@@ -117,42 +174,43 @@ const processNewDeviceConnectionChange = () => {
     if (!processing) {
         processing = true;
         setTimeout(() => {
-            finishProcessing();
+            finishProcessing(recordedEvents);
+            recordedEvents = [];
         }, 400);
     }
-}
+};
 
-MIDIVal.onInputDeviceConnected((input) => {
+MIDIVal.onInputDeviceConnected(input => {
     processNewDeviceConnectionChange();
 
-    events.push({
+    recordedEvents.push({
         type: 'input_connected',
         device: input,
     });
 });
 
-MIDIVal.onInputDeviceDisconnected((input) => {
+MIDIVal.onInputDeviceDisconnected(input => {
     processNewDeviceConnectionChange();
 
-    events.push({
+    recordedEvents.push({
         type: 'input_disconnected',
         device: input,
     });
 });
 
-MIDIVal.onOutputDeviceConnected((output) => {
+MIDIVal.onOutputDeviceConnected(output => {
     processNewDeviceConnectionChange();
 
-    events.push({
+    recordedEvents.push({
         type: 'output_connected',
         device: output,
     });
 });
 
-MIDIVal.onOutputDeviceDisconnected((output) => {
+MIDIVal.onOutputDeviceDisconnected(output => {
     processNewDeviceConnectionChange();
 
-    events.push({
+    recordedEvents.push({
         type: 'output_disconnected',
         device: output,
     });

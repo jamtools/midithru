@@ -2,15 +2,21 @@
   "name": "midithru",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "parcel src/index.html"
+    "build": "rm -rf dist-build && parcel build src/index.html --dist-dir dist-build",
+    "build-prod": " NODE_ENV=production npm run build",
+    "dev": "parcel src/index.html",
+    "lint": "biome lint ./src",
+    "fix": "biome format --write ./src",
+    "check-types": "tsc --noEmit",
+    "ci": "biome ci ./src"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@biomejs/biome": "1.7.0",
     "@types/react": "^18.2.79",
     "@types/react-dom": "^18.2.25",
     "parcel": "^2.12.0",
