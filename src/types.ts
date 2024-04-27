@@ -1,4 +1,14 @@
-import {IMIDIInput, IMIDIOutput} from '@midival/core';
+import {
+    IMIDIInput,
+    IMIDIOutput,
+    MIDIValInput,
+    MIDIValOutput,
+} from '@midival/core';
+
+export type MidiDeviceDescriptor = {
+    name: string;
+    manufacturer: string;
+};
 
 type InputMidiDeviceConnectedEvent = {
     type: 'input_connected';
@@ -34,8 +44,8 @@ export const MidiEventMatchers = {
 };
 
 export const isSameMidiDevice = (
-    a: IMIDIInput | IMIDIOutput,
-    b: IMIDIInput | IMIDIOutput,
+    a: MidiDeviceDescriptor,
+    b: MidiDeviceDescriptor,
 ): boolean => {
     return a.name === b.name && a.manufacturer === b.manufacturer;
 };
@@ -56,9 +66,16 @@ export type MidiDeviceChangeEvent =
     | OutputMidiDeviceConnectedEvent
     | OutputMidiDeviceDisconnectedEvent;
 
+export interface MidiInput extends Omit<MIDIValInput, 'midiInput'> {
+    midiInput: IMIDIInput;
+}
+export interface MidiOutput extends Omit<MIDIValOutput, 'midiOutput'> {
+    midiOutput: IMIDIOutput;
+}
+
 export type CurrentMidiDeviceState = {
-    connectedInputDevices: IMIDIInput[];
-    connectedOutputDevices: IMIDIOutput[];
+    connectedInputDevices: MidiInput[];
+    connectedOutputDevices: MidiOutput[];
 };
 
 export type MidiDeviceChangeMessage = {
