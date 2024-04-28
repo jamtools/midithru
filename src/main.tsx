@@ -1,40 +1,65 @@
-import {CSSProperties, useEffect, useState} from 'react';
+import {CSSProperties, useEffect, useRef, useState} from 'react';
 
-import {IMIDIInput, IMIDIOutput} from '@midival/core';
+import {IMIDIInput, IMIDIOutput, MidiMessage} from '@midival/core';
 
 import {Toaster} from 'react-hot-toast';
 
 import {useMidi} from './hooks/useMidi';
 import {useSavedData} from './hooks/useSavedData';
 
+import {MidiInput, MidiOutput, isSameMidiDevice} from './types';
+
 import './styles.scss';
-import {MidiDeviceDescriptor, isSameMidiDevice} from './types';
 
 export const Main = () => {
     const midiState = useMidi();
-    const savedData = useSavedData();
+    const {savedData, updateMidiMappings} = useSavedData();
 
-    const [selectedInput, setSelectedInput] =
-        useState<MidiDeviceDescriptor | null>(null);
-    const [selectedOutput, setSelectedOutput] =
-        useState<MidiDeviceDescriptor | null>(null);
+    const [selectedInput, setSelectedInput] = useState<MidiInput | null>(null);
+    const selectedInputRef = useRef<IMIDIInput | null>(null);
+
+    const [selectedOutput, setSelectedOutput] = useState<MidiOutput | null>(
+        null,
+    );
+    const selectedOutputRef = useRef<IMIDIOutput | null>(null);
+
+    const unregisterInputRef = useRef<(() => void) | null>(null);
 
     useEffect(() => {
         console.log('Saved data:', savedData);
     }, [savedData]);
 
-    const queueInput = (device: MidiDeviceDescriptor) => {
-        setSelectedInput(device);
-        const input = midiState.connectedInputDevices.find(d =>
-            isSameMidiDevice(d.midiInput, device),
-        );
-        if (!input) {
+    const handleMidiInput = (message: Uint8Array) => {
+        if (!selectedOutputRef.current) {
             return;
         }
+
+        selectedOutputRef.current.send(message);
+        // alert(`sent message ${message}`);
     };
 
-    const queueOutput = (device: MidiDeviceDescriptor) => {
+    const queueInput = async (input: MidiInput) => {
+        setSelectedInput(input);
+        if (unregisterInputRef.current) {
+            unregisterInputRef.current();
+        }
+
+        selectedInputRef.current = input.midiInput;
+
+        unregisterInputRef.current = await input.midiInput.onMessage(
+            message => {
+                handleMidiInput(message.data);
+            },
+        );
+
+        // save to local storage if necessary
+    };
+
+    const queueOutput = (device: MidiOutput) => {
         setSelectedOutput(device);
+        selectedOutputRef.current = device.midiOutput;
+
+        // save to local storage if necessary
     };
 
     return (
@@ -47,11 +72,11 @@ export const Main = () => {
                         <MidiDevice
                             key={device.midiInput.id}
                             device={device.midiInput}
-                            onClick={() => queueInput(device.midiInput)}
+                            onClick={() => queueInput(device)}
                             selected={Boolean(
                                 selectedInput &&
                                     isSameMidiDevice(
-                                        selectedInput,
+                                        selectedInput.midiInput,
                                         device.midiInput,
                                     ),
                             )}
@@ -66,11 +91,11 @@ export const Main = () => {
                         <MidiDevice
                             key={device.midiOutput.id}
                             device={device.midiOutput}
-                            onClick={() => queueOutput(device.midiOutput)}
+                            onClick={() => queueOutput(device)}
                             selected={Boolean(
                                 selectedOutput &&
                                     isSameMidiDevice(
-                                        selectedOutput,
+                                        selectedOutput.midiOutput,
                                         device.midiOutput,
                                     ),
                             )}

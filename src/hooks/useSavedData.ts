@@ -1,5 +1,5 @@
 import {useEffect, useMemo, useState} from 'react';
-import {MidiDeviceDescriptor} from '../types';
+import {MidiDeviceDescriptor, isSameMidiDevice} from '../types';
 
 type MidiMapping = {
     input: MidiDeviceDescriptor;
@@ -45,7 +45,28 @@ export const useSavedData = () => {
     return useMemo(
         () => ({
             savedData,
-            updateMidiMappings: (newMappings: MidiMapping[]) => {
+            updateMidiMappings: (
+                input: MidiDeviceDescriptor,
+                output: MidiDeviceDescriptor,
+            ) => {
+                if (
+                    savedData.mappings.some(
+                        mapping =>
+                            isSameMidiDevice(mapping.input, input) &&
+                            isSameMidiDevice(mapping.output, output),
+                    )
+                ) {
+                    return;
+                }
+
+                const newMappings = [
+                    ...savedData.mappings,
+                    {
+                        input,
+                        output,
+                    },
+                ];
+
                 setSavedData(savedData => {
                     const newData = {
                         ...savedData,
