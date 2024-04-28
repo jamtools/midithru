@@ -5,7 +5,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "rm -rf dist-build && parcel build src/index.html --dist-dir dist-build",
-    "build-prod": " NODE_ENV=production npm run build",
+    "build-prod": "NODE_ENV=production npm run build",
+    "deploy": "./scripts/deploy-to-cloudflare",
     "dev": "parcel src/index.html",
     "lint": "biome lint ./src",
     "fix": "biome format --write ./src",
