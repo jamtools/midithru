@@ -12,7 +12,7 @@ let midiConnectPromise: Promise<IMIDIAccess>;
 try {
     midiConnectPromise = MIDIVal.connect();
 } catch (e) {
-    alert(e.toString());
+    alert((e as Error)?.toString());
     throw e;
 }
 
