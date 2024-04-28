@@ -41,7 +41,7 @@ export const useMidi = (): CurrentMidiDeviceState => {
                 }
 
                 toast(text, {
-                    duration: 4000,
+                    duration: 2600,
                     style: {
                         backgroundColor,
                     },
